@@ -80,21 +80,45 @@ def play_round(game_id, bot_id):
 
     if game['bot1_move'] and game['bot2_move']:
         diff = moves_map[game['bot1_move']] - moves_map[game['bot2_move']]
+        result = "Draw"
         if diff in [-1, 2]:
             game['score'][0] += 1
+            result = "Bot 1 Wins" if bot_id == game['bot1_id'] else "Bot 2 Wins"
         elif diff in [-2, 1]:
             game['score'][1] += 1
+            result = "Bot 2 Wins" if bot_id == game['bot1_id'] else "Bot 1 Wins"
         game['round'] += 1
         game['history'].append((game['bot1_move'], game['bot2_move']))
+
+        your_move = game['bot1_move'] if bot_id == game['bot1_id'] else game['bot2_move']
+        opponent_move = game['bot2_move'] if bot_id == game['bot1_id'] else game['bot1_move']
+        
+        outcome = "Draw"
+        if result == "Bot 1 Wins":
+            outcome = "You win" if bot_id == game['bot1_id'] else "You lose"
+        elif result == "Bot 2 Wins":
+            outcome = "You win" if bot_id == game['bot2_id'] else "You lose"
+
+        your_name = "Bot 1" if bot_id == game['bot1_id'] else "Bot 2"
 
         # Check if game is finished
         if game['round'] == game['num_rounds']:
             winner = "Draw" if game['score'][0] == game['score'][1] else ("Bot 1" if game['score'][0] > game['score'][1] else "Bot 2")
-            result = {"message": f"Game over! Winner: {winner}", "score": game['score']}
+            final_result = {"message": f"Game over! Winner: {winner}", "score": game['score']}
             games.clear()
-            return jsonify(result), 200
+            return jsonify(final_result), 200
+
+        round_result = {
+            "your_name": your_name,
+            "outcome": outcome,
+            "your_move": your_move,
+            "opponent_move": opponent_move,
+            "score": game['score']
+        }
+        return jsonify(round_result), 200
 
     return jsonify({"status": "Waiting for opponent"}), 200
+
 
 if __name__ == '__main__':
     port = 5005

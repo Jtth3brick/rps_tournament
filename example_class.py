@@ -1,6 +1,6 @@
 class rps:
     def __init__(self):
-        return '''None type'''
+        return self
 
     def play(self):
         return '''string type'''

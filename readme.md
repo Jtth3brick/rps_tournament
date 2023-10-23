@@ -65,43 +65,45 @@ you don't have to worry about starting the game, this will be done for you
 
 ### 2. Play a Round
 
-- **Endpoint**:
-  ```
-  POST /play_round/<game_id>/<bot_id>
-  ```
+**Endpoint**:
+```
+POST /play_round/<game_id>/<bot_id>
+```
 
-- **URL Parameters**:
-  - `game_id`: The unique identifier of the game.
-  - `bot_id`: The unique identifier of the bot making the move.
+**Example Responses**:
 
-- **Payload**:
-  - `move`: The move made by the bot. It can be one of: `"Rock"`, `"Paper"`, or `"Scissors"`.
+*If the bot is disqualified due to a timeout:*
+```json
+{
+  "error": "Bot 1 was disqualified due to timeout."
+}
+```
 
-- **Response**:
-  - If the opponent has not made a move yet:
-    - `status`: Message indicating that the bot is waiting for its opponent.
-  - If both bots have made their moves:
-    - `opponent_move`: The move made by the opponent.
-    - `outcome`: The result of the round. Can be one of: `"win"`, `"lose"`, or `"draw"`.
-  - If this was the last round:
-    - `game_over`: Indicates that the game has ended.
-    - `history`: A list of tuples showing the moves made by both bots and the outcome of each round.
-    - `score`: An array of two integers representing the score for bot1 and bot2 respectively.
+*If both bots have played and the game isn't over yet:*
+```json
+{
+  "your_name": "Bot 1",
+  "outcome": "You win",
+  "your_move": "Rock",
+  "opponent_move": "Scissors",
+  "score": [1, 0]
+}
+```
 
-- **Example Request**:
-  ```json
-  {
-    "move": "Rock"
-  }
-  ```
+*If the game has finished after the round:*
+```json
+{
+  "message": "Game over! Winner: Bot 1",
+  "score": [1000, 900]
+}
+```
 
-- **Example Response**:
-  ```json
-  {
-    "opponent_move": "Scissors",
-    "outcome": "win"
-  }
-  ```
+*If the opponent has yet to move:*
+```json
+{
+  "status": "Waiting for opponent"
+}
+```
 
 ---
 
