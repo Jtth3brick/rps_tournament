@@ -1,4 +1,6 @@
 import random
+import time
+import threading
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
@@ -11,7 +13,8 @@ def generate_bot_id():
 
 @app.route('/start_game', methods=['POST'])
 def start_game():
-    game_id = str(len(games) + 1)
+    games.clear()  # Clear the games dictionary
+    game_id = "1"  # We're assuming only one game at a time
     bot1_id = generate_bot_id()
     bot2_id = generate_bot_id()
 
@@ -29,8 +32,6 @@ def start_game():
         "num_rounds": num_rounds,
         "history": []
     }
-    
-    print(f"Expected Bot IDs for game {game_id}: Bot 1: {bot1_id}, Bot 2: {bot2_id}")
 
     return jsonify({
         "game_id": game_id,
@@ -39,62 +40,62 @@ def start_game():
         "message": "Game started!"
     }), 200
 
+def check_moves_timeout(game_id):
+    time.sleep(0.5)
+    game = games.get(game_id)
+    if not game:
+        return
+
+    if game['bot1_move'] is None:
+        game['score'][1] += 1  # Bot 2 wins by default
+        game["terminated"] = True
+        game["message"] = "Bot 1 was disqualified due to timeout."
+    elif game['bot2_move'] is None:
+        game['score'][0] += 1  # Bot 1 wins by default
+        game["terminated"] = True
+        game["message"] = "Bot 2 was disqualified due to timeout."
+
 @app.route('/play_round/<game_id>/<bot_id>', methods=['POST'])
 def play_round(game_id, bot_id):
     game = games.get(game_id)
     if not game:
         return jsonify({"error": "Game not found!"}), 404
-    
+
     move = request.json.get("move")
-    
     if move not in moves_map:
         return jsonify({"error": "Invalid move!"}), 400
 
+    if game['bot1_move'] is None and game['bot2_move'] is None:
+        threading.Thread(target=check_moves_timeout, args=(game_id,)).start()
+
     if bot_id == game['bot1_id']:
         game['bot1_move'] = move
-        print(f"Received move {move} from Bot 1 ({bot_id})")
     elif bot_id == game['bot2_id']:
         game['bot2_move'] = move
-        print(f"Received move {move} from Bot 2 ({bot_id})")
     else:
         return jsonify({"error": "Invalid Bot ID!"}), 404
 
-    if game['bot1_move'] is None:
-        print(f"Waiting for Bot 1 ({game['bot1_id']}) to make a move...")
-        return jsonify({"status": "Waiting for opponent"}), 200
-    if game['bot2_move'] is None:
-        print(f"Waiting for Bot 2 ({game['bot2_id']}) to make a move...")
-        return jsonify({"status": "Waiting for opponent"}), 200
+    if game.get('terminated', False):
+        return jsonify({"error": game["message"]}), 400
 
-    # Once both moves are received, compute outcome
-    result = (moves_map[game['bot1_move']] - moves_map[game['bot2_move']]) % 3
-    if result == 0:
-        outcome = "draw"
-    elif result == 1:
-        outcome = "lose"
-        game["score"][1] += 1
-    else:
-        outcome = "win"
-        game["score"][0] += 1
-    
-    game["history"].append((game['bot1_move'], game['bot2_move'], outcome))
-    game["round"] += 1
+    if game['bot1_move'] and game['bot2_move']:
+        diff = moves_map[game['bot1_move']] - moves_map[game['bot2_move']]
+        if diff in [-1, 2]:
+            game['score'][0] += 1
+        elif diff in [-2, 1]:
+            game['score'][1] += 1
+        game['round'] += 1
+        game['history'].append((game['bot1_move'], game['bot2_move']))
 
-    game['bot1_move'] = None  # Reset moves for next round
-    game['bot2_move'] = None
+        # Check if game is finished
+        if game['round'] == game['num_rounds']:
+            winner = "Draw" if game['score'][0] == game['score'][1] else ("Bot 1" if game['score'][0] > game['score'][1] else "Bot 2")
+            result = {"message": f"Game over! Winner: {winner}", "score": game['score']}
+            games.clear()
+            return jsonify(result), 200
 
-    if game["round"] >= game["num_rounds"]:
-        del games[game_id]
-        return jsonify({"game_over": True, "history": game["history"], "score": game["score"]}), 200
-    
-    return jsonify({"opponent_move": move, "outcome": outcome}), 200
+    return jsonify({"status": "Waiting for opponent"}), 200
 
 if __name__ == '__main__':
     port = 5005
-    host_ip = "127.0.0.1"
-    print(f"\nServer is starting on http://{host_ip}:{port}")
-    print("\nConnection Instructions:")
-    print(f"1. Start a new game: POST http://{host_ip}:{port}/start_game with optional JSON body {{\"num_rounds\": <desired_number_of_rounds>}}")
-    print(f"2. Play a round: POST http://{host_ip}:{port}/play_round/{{game_id}}/{{bot_id}} with JSON body {{\"move\": \"<Rock/Paper/Scissors>\"}}")
-    print("\n")
     app.run(debug=True, host='0.0.0.0', port=port)
