@@ -46,11 +46,11 @@ def check_moves_timeout(game_id):
     if not game:
         return
 
-    if game['bot1_move'] is None:
+    if game['bot1_move'] is None and game['bot2_move'] is not None:
         game['score'][1] += 1  # Bot 2 wins by default
         game["terminated"] = True
         game["message"] = "Bot 1 was disqualified due to timeout."
-    elif game['bot2_move'] is None:
+    elif game['bot2_move'] is None and game['bot1_move'] is not None:
         game['score'][0] += 1  # Bot 1 wins by default
         game["terminated"] = True
         game["message"] = "Bot 2 was disqualified due to timeout."
@@ -65,7 +65,7 @@ def play_round(game_id, bot_id):
     if move not in moves_map:
         return jsonify({"error": "Invalid move!"}), 400
 
-    if game['bot1_move'] is None and game['bot2_move'] is None:
+    if game['round'] != 0 and game['bot1_move'] is None and game['bot2_move'] is None:
         threading.Thread(target=check_moves_timeout, args=(game_id,)).start()
 
     if bot_id == game['bot1_id']:
