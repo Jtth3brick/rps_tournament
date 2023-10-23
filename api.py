@@ -41,7 +41,7 @@ def start_game():
     }), 200
 
 def check_moves_timeout(game_id):
-    time.sleep(0.5)
+    time.sleep(0.7)
     game = games.get(game_id)
     if not game:
         return
