@@ -54,6 +54,12 @@ def check_moves_timeout(game_id):
         game['score'][0] += 1  # Bot 1 wins by default
         game["terminated"] = True
         game["message"] = "Bot 2 was disqualified due to timeout."
+    else:
+        game['score'][0] = 0
+        game['score'][1] = 0
+        game["terminated"] = True
+        game["message"] = "Both bots were disqualified due to timeout."
+
 
 @app.route('/play_round/<game_id>/<bot_id>', methods=['POST'])
 def play_round(game_id, bot_id):
